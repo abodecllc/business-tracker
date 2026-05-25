@@ -426,13 +426,15 @@ function togglePaid(id){var i=DB.invoices.find(function(x){return x.id===id;});i
 function delInv(id){if(!confirm('Delete this invoice?'))return;DB.invoices=DB.invoices.filter(function(x){return x.id!==id;});save();renderInvTable();}
 function viewInv(id){
   var inv=DB.invoices.find(function(x){return x.id===id;});if(!inv)return;
-  workers=JSON.parse(JSON.stringify(inv.workers||[]));
   nav('invoice-new');
-  sv('inv-num',inv.num);sv('inv-date',inv.date);sv('inv-due',inv.due);
-  sv('inv-cli-name',inv.clientName);sv('inv-cli-addr',inv.clientAddr||'');
-  sv('inv-event',inv.eventAddr||'');sv('inv-notes',inv.notes||'');
-  renderWorkers();
-  showInvTab('preview');
+  setTimeout(function(){
+    workers=JSON.parse(JSON.stringify(inv.workers||[]));
+    sv('inv-num',inv.num);sv('inv-date',inv.date);sv('inv-due',inv.due);
+    sv('inv-cli-name',inv.clientName);sv('inv-cli-addr',inv.clientAddr||'');
+    sv('inv-event',inv.eventAddr||'');sv('inv-notes',inv.notes||'');
+    renderWorkers();
+    showInvTab('preview');
+  },100);
 }
 
 function saveClient(){var name=gv('cli-name');if(!name)return alert('Client name required.');var eid=gv('cli-edit-id');if(eid){var c=DB.clients.find(function(x){return x.id==eid;});if(c){c.name=name;c.contact=gv('cli-contact');c.addr=gv('cli-addr');c.phone=gv('cli-phone');c.email=gv('cli-email');c.notes=gv('cli-notes');}}else{DB.clients.push({id:Date.now(),name:name,contact:gv('cli-contact'),addr:gv('cli-addr'),phone:gv('cli-phone'),email:gv('cli-email'),notes:gv('cli-notes')});}save();clearCliForm();renderCliTable();populateCliPicker();}
