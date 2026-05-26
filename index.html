@@ -110,7 +110,7 @@ tr:hover td{background:var(--bg)}
 </div>
 
 <div id="page-invoice-new" class="page">
-  <div class="pg-title"><i class="ti ti-file-plus" style="color:var(--accent)"></i> New Invoice</div>
+  <div class="pg-title" id="inv-page-title"><i class="ti ti-file-plus" style="color:var(--accent)"></i> New Invoice</div>
   <div class="inv-tabs">
     <div class="inv-tab" id="itab-builder" onclick="showInvTab('builder')">Builder</div>
     <div class="inv-tab" id="itab-preview" onclick="showInvTab('preview')">Preview &amp; Download</div>
@@ -161,8 +161,9 @@ tr:hover td{background:var(--bg)}
       <div class="fg"><label>Notes / Payment Terms</label><textarea id="inv-notes" rows="2" placeholder="Payment due within 30 days. Thank you for your business."></textarea></div>
     </div>
     <div class="acts">
-      <button class="primary" onclick="saveInvoice()"><i class="ti ti-device-floppy"></i> Save Invoice</button>
+      <button class="primary" id="save-inv-btn" onclick="saveInvoice()"><i class="ti ti-device-floppy"></i> Save Invoice</button>
       <button onclick="showInvTab('preview')"><i class="ti ti-eye"></i> Preview &amp; Download PDF</button>
+      <button onclick="nav('invoices')" style="margin-left:auto">Cancel</button>
     </div>
   </div>
   <div id="inv-preview" class="inv-pane">
@@ -317,6 +318,7 @@ tr:hover td{background:var(--bg)}
 var DB={settings:{co:'',addr:'',ph:'',em:'',web:'',taxRate:6.625},clients:[],invoices:[],income:[],expenses:[],draws:[],njTax:{},federal:[]};
 var workers=[];
 var currentPage='dashboard';
+var editingInvoiceId=null;
 
 function load(){
   var s=localStorage.getItem('biz_tracker_v3');
@@ -334,10 +336,8 @@ function nav(id){
   currentPage=id;
   document.querySelectorAll('.page').forEach(function(p){p.classList.remove('active');});
   document.querySelectorAll('.nav-btn').forEach(function(n){n.classList.remove('active');});
-  var pg=document.getElementById('page-'+id);
-  if(pg)pg.classList.add('active');
-  var nb=document.getElementById('nav-'+id);
-  if(nb)nb.classList.add('active');
+  var pg=document.getElementById('page-'+id);if(pg)pg.classList.add('active');
+  var nb=document.getElementById('nav-'+id);if(nb)nb.classList.add('active');
   if(id==='dashboard')renderDash();
   if(id==='invoices')renderInvTable();
   if(id==='invoice-new')initNewInv();
@@ -353,10 +353,8 @@ function nav(id){
 function showInvTab(name){
   document.querySelectorAll('.inv-tab').forEach(function(t){t.classList.remove('active');});
   document.querySelectorAll('.inv-pane').forEach(function(p){p.classList.remove('active');});
-  var tab=document.getElementById('itab-'+name);
-  var pane=document.getElementById('inv-'+name);
-  if(tab)tab.classList.add('active');
-  if(pane)pane.classList.add('active');
+  var tab=document.getElementById('itab-'+name);var pane=document.getElementById('inv-'+name);
+  if(tab)tab.classList.add('active');if(pane)pane.classList.add('active');
   if(name==='preview')renderPreview();
 }
 
@@ -368,6 +366,7 @@ function applySettings(){var s=DB.settings;var el=document.getElementById('co-na
 function saveSettings(){DB.settings={co:gv('set-co'),addr:gv('set-addr'),ph:gv('set-ph'),em:gv('set-em'),web:gv('set-web'),taxRate:parseFloat(gv('set-tax'))||6.625};save();applySettings();alert('Settings saved!');}
 
 function initNewInv(){
+  editingInvoiceId=null;
   workers=[{id:Date.now(),title:'',desc:'',hours:'',rate:''}];
   renderWorkers();
   sv('inv-date',today());
@@ -378,63 +377,97 @@ function initNewInv(){
   showInvTab('builder');
   populateCliPicker();
   var td=document.getElementById('tax-disp');if(td)td.textContent=DB.settings.taxRate||6.625;
+  var btn=document.getElementById('save-inv-btn');if(btn)btn.innerHTML='<i class="ti ti-device-floppy"></i> Save Invoice';
+  var title=document.getElementById('inv-page-title');if(title)title.innerHTML='<i class="ti ti-file-plus" style="color:var(--accent)"></i> New Invoice';
 }
+
 function addWorker(){workers.push({id:Date.now(),title:'',desc:'',hours:'',rate:''});renderWorkers();}
 function rmWorker(id){workers=workers.filter(function(w){return w.id!==id;});renderWorkers();}
-function upW(id,f,v){var w=workers.find(function(x){return x.id===id;});if(w)w[f]=v;calcTotals();}
+function upW(id,f,v){var w=workers.find(function(x){return x.id===id;});if(w)w[f]=v;renderWorkers();}
+
 function renderWorkers(){
-  var c=document.getElementById('workers-list');if(!c)return;c.innerHTML='';
+  var c=document.getElementById('workers-list');if(!c)return;
+  var focusId=document.activeElement?document.activeElement.id:null;
+  c.innerHTML='';
   workers.forEach(function(w){
     var div=document.createElement('div');div.className='worker-row';
     var sub=(parseFloat(w.hours||0)*parseFloat(w.rate||0)).toFixed(2);
-    div.innerHTML='<input placeholder="e.g. Electrician" value="'+(w.title||'')+'" onchange="upW('+w.id+',\'title\',this.value)">'+
-      '<input placeholder="Description" value="'+(w.desc||'')+'" onchange="upW('+w.id+',\'desc\',this.value)">'+
-      '<input type="number" placeholder="0" value="'+(w.hours||'')+'" step="0.25" min="0" onchange="upW('+w.id+',\'hours\',this.value)">'+
-      '<input type="number" placeholder="0.00" value="'+(w.rate||'')+'" step="0.01" min="0" onchange="upW('+w.id+',\'rate\',this.value)">'+
+    div.innerHTML=
+      '<input id="wt-'+w.id+'" placeholder="e.g. Electrician" value="'+(w.title||'')+'" onchange="upW('+w.id+',\'title\',this.value)">'+
+      '<input id="wd-'+w.id+'" placeholder="Description" value="'+(w.desc||'')+'" onchange="upW('+w.id+',\'desc\',this.value)">'+
+      '<input id="wh-'+w.id+'" type="number" placeholder="0" value="'+(w.hours||'')+'" step="0.25" min="0" oninput="upW('+w.id+',\'hours\',this.value)">'+
+      '<input id="wr-'+w.id+'" type="number" placeholder="0.00" value="'+(w.rate||'')+'" step="0.01" min="0" oninput="upW('+w.id+',\'rate\',this.value)">'+
       '<input readonly value="$'+sub+'" style="background:var(--bg);font-weight:600">'+
       '<button class="rm-btn" onclick="rmWorker('+w.id+')"><i class="ti ti-x"></i></button>';
     c.appendChild(div);
   });
   calcTotals();
 }
+
 function calcTotals(){
   var sub=workers.reduce(function(s,w){return s+parseFloat(w.hours||0)*parseFloat(w.rate||0);},0);
   var tr=(parseFloat(DB.settings.taxRate)||6.625)/100;var tax=sub*tr;
   var s=document.getElementById('inv-sub');var t=document.getElementById('inv-tax');var tot=document.getElementById('inv-total');
   if(s)s.textContent=money(sub);if(t)t.textContent=money(tax);if(tot)tot.textContent=money(sub+tax);
 }
+
 function saveInvoice(){
   var num=gv('inv-num'),cn=gv('inv-cli-name');
   if(!num||!cn)return alert('Invoice # and client name required.');
   var sub=workers.reduce(function(s,w){return s+parseFloat(w.hours||0)*parseFloat(w.rate||0);},0);
   var tr=(parseFloat(DB.settings.taxRate)||6.625)/100;var tax=sub*tr;
-  var inv={id:Date.now(),num:num,date:gv('inv-date'),due:gv('inv-due'),clientName:cn,clientAddr:gv('inv-cli-addr'),eventAddr:gv('inv-event'),workers:JSON.parse(JSON.stringify(workers)),notes:gv('inv-notes'),subtotal:sub,tax:tax,total:sub+tax,status:'unpaid',taxRate:DB.settings.taxRate||6.625};
-  DB.invoices.unshift(inv);save();alert('Invoice '+num+' saved!');nav('invoices');
+  if(editingInvoiceId){
+    var ex=DB.invoices.find(function(x){return x.id===editingInvoiceId;});
+    if(ex){
+      ex.num=num;ex.date=gv('inv-date');ex.due=gv('inv-due');ex.clientName=cn;
+      ex.clientAddr=gv('inv-cli-addr');ex.eventAddr=gv('inv-event');
+      ex.workers=JSON.parse(JSON.stringify(workers));ex.notes=gv('inv-notes');
+      ex.subtotal=sub;ex.tax=tax;ex.total=sub+tax;ex.taxRate=DB.settings.taxRate||6.625;
+    }
+    save();alert('Invoice '+num+' updated!');editingInvoiceId=null;nav('invoices');
+  } else {
+    var inv={id:Date.now(),num:num,date:gv('inv-date'),due:gv('inv-due'),clientName:cn,
+      clientAddr:gv('inv-cli-addr'),eventAddr:gv('inv-event'),
+      workers:JSON.parse(JSON.stringify(workers)),notes:gv('inv-notes'),
+      subtotal:sub,tax:tax,total:sub+tax,status:'unpaid',taxRate:DB.settings.taxRate||6.625};
+    DB.invoices.unshift(inv);save();alert('Invoice '+num+' saved!');nav('invoices');
+  }
 }
+
 function fillClient(){var id=gv('cli-pick');if(!id)return;var c=DB.clients.find(function(x){return x.id==id;});if(c){sv('inv-cli-name',c.name);sv('inv-cli-addr',c.addr);}}
 function populateCliPicker(){var sel=document.getElementById('cli-pick');if(!sel)return;sel.innerHTML='<option value="">-- Saved client --</option>';DB.clients.forEach(function(c){sel.innerHTML+='<option value="'+c.id+'">'+c.name+'</option>';});}
+
 function renderInvTable(){
   var el=document.getElementById('inv-table');if(!el)return;
   if(!DB.invoices.length){el.innerHTML='<p style="color:var(--muted);font-size:13px;padding:8px 0">No invoices yet.</p>';return;}
   var totUnpaid=DB.invoices.filter(function(i){return i.status!=='paid';}).reduce(function(s,i){return s+(i.total||0);},0);
   el.innerHTML='<div style="display:flex;justify-content:space-between;margin-bottom:12px"><span style="font-size:12px;color:var(--muted)">'+DB.invoices.length+' invoice(s)</span><span style="font-size:12px">Outstanding: <strong style="color:var(--danger)">'+money(totUnpaid)+'</strong></span></div>'+
     '<table><thead><tr><th>Invoice #</th><th>Client</th><th>Date</th><th>Due</th><th style="text-align:right">Total</th><th>Status</th><th>Actions</th></tr></thead><tbody>'+
-    DB.invoices.map(function(i){return '<tr><td><strong>'+i.num+'</strong></td><td>'+i.clientName+'</td><td>'+fmt(i.date)+'</td><td>'+fmt(i.due)+'</td><td style="text-align:right"><strong>'+money(i.total)+'</strong></td><td><span class="badge '+(i.status==='paid'?'green':'red')+'">'+i.status+'</span></td><td><span style="display:flex;gap:5px"><button onclick="viewInv('+i.id+')" style="font-size:11px" title="Preview"><i class="ti ti-eye"></i></button><button onclick="togglePaid('+i.id+')" style="font-size:11px">'+(i.status==='paid'?'Unpaid':'Paid')+'</button><button class="danger-btn" onclick="delInv('+i.id+')" style="font-size:11px"><i class="ti ti-trash"></i></button></span></td></tr>';}).join('')+
+    DB.invoices.map(function(i){return '<tr><td><strong>'+i.num+'</strong></td><td>'+i.clientName+'</td><td>'+fmt(i.date)+'</td><td>'+fmt(i.due)+'</td><td style="text-align:right"><strong>'+money(i.total)+'</strong></td><td><span class="badge '+(i.status==='paid'?'green':'red')+'">'+i.status+'</span></td><td><span style="display:flex;gap:5px"><button onclick="viewInv('+i.id+')" style="font-size:11px" title="Edit / Preview"><i class="ti ti-edit"></i></button><button onclick="togglePaid('+i.id+')" style="font-size:11px">'+(i.status==='paid'?'Unpaid':'Paid')+'</button><button class="danger-btn" onclick="delInv('+i.id+')" style="font-size:11px"><i class="ti ti-trash"></i></button></span></td></tr>';}).join('')+
     '</tbody></table>';
 }
+
 function togglePaid(id){var i=DB.invoices.find(function(x){return x.id===id;});if(i){i.status=i.status==='paid'?'unpaid':'paid';save();renderInvTable();}}
 function delInv(id){if(!confirm('Delete this invoice?'))return;DB.invoices=DB.invoices.filter(function(x){return x.id!==id;});save();renderInvTable();}
+
 function viewInv(id){
   var inv=DB.invoices.find(function(x){return x.id===id;});if(!inv)return;
-  nav('invoice-new');
-  setTimeout(function(){
-    workers=JSON.parse(JSON.stringify(inv.workers||[]));
-    sv('inv-num',inv.num);sv('inv-date',inv.date);sv('inv-due',inv.due);
-    sv('inv-cli-name',inv.clientName);sv('inv-cli-addr',inv.clientAddr||'');
-    sv('inv-event',inv.eventAddr||'');sv('inv-notes',inv.notes||'');
-    renderWorkers();
-    showInvTab('preview');
-  },100);
+  editingInvoiceId=id;
+  currentPage='invoice-new';
+  document.querySelectorAll('.page').forEach(function(p){p.classList.remove('active');});
+  document.querySelectorAll('.nav-btn').forEach(function(n){n.classList.remove('active');});
+  var pg=document.getElementById('page-invoice-new');if(pg)pg.classList.add('active');
+  var nb=document.getElementById('nav-invoice-new');if(nb)nb.classList.add('active');
+  workers=JSON.parse(JSON.stringify(inv.workers||[]));
+  sv('inv-num',inv.num);sv('inv-date',inv.date);sv('inv-due',inv.due);
+  sv('inv-cli-name',inv.clientName);sv('inv-cli-addr',inv.clientAddr||'');
+  sv('inv-event',inv.eventAddr||'');sv('inv-notes',inv.notes||'');
+  populateCliPicker();
+  var td=document.getElementById('tax-disp');if(td)td.textContent=inv.taxRate||DB.settings.taxRate||6.625;
+  var btn=document.getElementById('save-inv-btn');if(btn)btn.innerHTML='<i class="ti ti-device-floppy"></i> Update Invoice';
+  var title=document.getElementById('inv-page-title');if(title)title.innerHTML='<i class="ti ti-edit" style="color:var(--accent)"></i> Edit Invoice '+inv.num;
+  renderWorkers();
+  showInvTab('builder');
 }
 
 function saveClient(){var name=gv('cli-name');if(!name)return alert('Client name required.');var eid=gv('cli-edit-id');if(eid){var c=DB.clients.find(function(x){return x.id==eid;});if(c){c.name=name;c.contact=gv('cli-contact');c.addr=gv('cli-addr');c.phone=gv('cli-phone');c.email=gv('cli-email');c.notes=gv('cli-notes');}}else{DB.clients.push({id:Date.now(),name:name,contact:gv('cli-contact'),addr:gv('cli-addr'),phone:gv('cli-phone'),email:gv('cli-email'),notes:gv('cli-notes')});}save();clearCliForm();renderCliTable();populateCliPicker();}
