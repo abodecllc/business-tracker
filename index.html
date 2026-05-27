@@ -26,7 +26,7 @@ label{font-size:11px;color:var(--muted);display:block;margin-bottom:3px}
 .nav-btn{padding:9px 14px;font-size:13px;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;user-select:none;display:flex;align-items:center;gap:5px;transition:all .15s;font-family:Georgia,serif}
 .nav-btn:hover{color:var(--text)}
 .nav-btn.active{color:var(--accent);border-bottom-color:var(--accent);font-weight:600}
-.main{padding:24px;max-width:920px;margin:0 auto}
+.main{padding:24px;max-width:960px;margin:0 auto}
 .page{display:none}.page.active{display:block}
 .card{background:var(--surface);border:0.5px solid var(--border);border-radius:10px;padding:18px;margin-bottom:14px}
 .card-title{font-weight:700;font-size:14px;margin-bottom:12px}
@@ -55,8 +55,8 @@ tr:hover td{background:var(--bg)}
 .acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
 .worker-row{display:grid;grid-template-columns:2fr 2fr 80px 100px 100px 36px;gap:6px;align-items:end;margin-bottom:6px}
 .rm-btn{background:var(--danger-light);color:var(--danger);border:none;border-radius:6px;padding:6px 9px;cursor:pointer;font-size:14px;height:33px;display:flex;align-items:center;justify-content:center}
-.tax-card{border:0.5px solid var(--border);border-radius:8px;padding:16px;position:relative;overflow:hidden;margin-bottom:12px;background:var(--surface)}
-.tax-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px}
+.tax-card{border:0.5px solid var(--border);border-radius:10px;padding:18px;position:relative;overflow:hidden;margin-bottom:14px;background:var(--surface)}
+.tax-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:5px}
 .tax-card.paid::before{background:var(--success)}
 .tax-card.overdue::before{background:var(--danger)}
 .tax-card.upcoming::before{background:var(--warn)}
@@ -71,6 +71,11 @@ tr:hover td{background:var(--bg)}
 .inv-tab{padding:8px 16px;font-size:13px;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-0.5px;transition:all .15s;font-family:Georgia,serif}
 .inv-tab.active{color:var(--accent);border-bottom-color:var(--accent);font-weight:600}
 .inv-pane{display:none}.inv-pane.active{display:block}
+.summary-box{background:var(--accent-light);border:0.5px solid #B8D4F0;border-radius:8px;padding:14px 16px;margin-bottom:14px}
+.summary-box .row{display:flex;justify-content:space-between;align-items:center;padding:4px 0;font-size:13px}
+.summary-box .row.total{font-weight:700;border-top:1px solid #B8D4F0;margin-top:6px;padding-top:8px;font-size:14px}
+.summary-box .label{color:var(--accent)}
+.summary-box .val{color:var(--text);font-weight:600}
 @media(max-width:680px){.g2,.g3,.g4{grid-template-columns:1fr}.worker-row{grid-template-columns:1fr 1fr}}
 </style>
 </head>
@@ -262,7 +267,7 @@ tr:hover td{background:var(--bg)}
   </div>
   <div id="nj-alerts"></div>
   <div id="nj-cards"></div>
-  <div class="info-box"><strong>NJ CBT Due Dates:</strong> Q1 Apr 15 &nbsp;·&nbsp; Q2 Jun 15 &nbsp;·&nbsp; Q3 Sep 15 &nbsp;·&nbsp; Q4 Jan 15 (next year)</div>
+  <div class="info-box"><strong>NJ CBT Due Dates:</strong> Q1 Apr 15 &nbsp;·&nbsp; Q2 Jun 15 &nbsp;·&nbsp; Q3 Sep 15 &nbsp;·&nbsp; Q4 Jan 15 (next year)<br><span style="font-size:11px;margin-top:4px;display:block">Invoice totals are based on invoice <strong>date</strong>. Q1=Jan-Mar, Q2=Apr-Jun, Q3=Jul-Sep, Q4=Oct-Dec.</span></div>
 </div>
 
 <div id="page-federal" class="page">
@@ -383,6 +388,7 @@ function initNewInv(){
 
 function addWorker(){workers.push({id:Date.now(),title:'',desc:'',hours:'',rate:''});renderWorkers();}
 function rmWorker(id){workers=workers.filter(function(w){return w.id!==id;});renderWorkers();}
+
 function upW(id,f,v){
   var w=workers.find(function(x){return x.id===id;});
   if(!w)return;
@@ -395,16 +401,15 @@ function upW(id,f,v){
 
 function renderWorkers(){
   var c=document.getElementById('workers-list');if(!c)return;
-  var focusId=document.activeElement?document.activeElement.id:null;
   c.innerHTML='';
   workers.forEach(function(w){
     var div=document.createElement('div');div.className='worker-row';
     var sub=(parseFloat(w.hours||0)*parseFloat(w.rate||0)).toFixed(2);
     div.innerHTML=
-      '<input id="wt-'+w.id+'" placeholder="e.g. Electrician" value="'+(w.title||'')+'" onchange="upW('+w.id+',\'title\',this.value)">'+
-      '<input id="wd-'+w.id+'" placeholder="Description" value="'+(w.desc||'')+'" onchange="upW('+w.id+',\'desc\',this.value)">'+
-      '<input id="wh-'+w.id+'" type="number" placeholder="0" value="'+(w.hours||'')+'" step="0.25" min="0" oninput="upW('+w.id+',\'hours\',this.value)">'+
-      '<input id="wr-'+w.id+'" type="number" placeholder="0.00" value="'+(w.rate||'')+'" step="0.01" min="0" oninput="upW('+w.id+',\'rate\',this.value)">'+
+      '<input placeholder="e.g. Electrician" value="'+(w.title||'')+'" onchange="upW('+w.id+',\'title\',this.value)">'+
+      '<input placeholder="Description" value="'+(w.desc||'')+'" onchange="upW('+w.id+',\'desc\',this.value)">'+
+      '<input type="number" placeholder="0" value="'+(w.hours||'')+'" step="0.25" min="0" oninput="upW('+w.id+',\'hours\',this.value)">'+
+      '<input type="number" placeholder="0.00" value="'+(w.rate||'')+'" step="0.01" min="0" oninput="upW('+w.id+',\'rate\',this.value)">'+
       '<input readonly id="ws-'+w.id+'" value="$'+sub+'" style="background:var(--bg);font-weight:600">'+
       '<button class="rm-btn" onclick="rmWorker('+w.id+')"><i class="ti ti-x"></i></button>';
     c.appendChild(div);
@@ -451,7 +456,7 @@ function renderInvTable(){
   var totUnpaid=DB.invoices.filter(function(i){return i.status!=='paid';}).reduce(function(s,i){return s+(i.total||0);},0);
   el.innerHTML='<div style="display:flex;justify-content:space-between;margin-bottom:12px"><span style="font-size:12px;color:var(--muted)">'+DB.invoices.length+' invoice(s)</span><span style="font-size:12px">Outstanding: <strong style="color:var(--danger)">'+money(totUnpaid)+'</strong></span></div>'+
     '<table><thead><tr><th>Invoice #</th><th>Client</th><th>Date</th><th>Due</th><th style="text-align:right">Total</th><th>Status</th><th>Actions</th></tr></thead><tbody>'+
-    DB.invoices.map(function(i){return '<tr><td><strong>'+i.num+'</strong></td><td>'+i.clientName+'</td><td>'+fmt(i.date)+'</td><td>'+fmt(i.due)+'</td><td style="text-align:right"><strong>'+money(i.total)+'</strong></td><td><span class="badge '+(i.status==='paid'?'green':'red')+'">'+i.status+'</span></td><td><span style="display:flex;gap:5px"><button onclick="viewInv('+i.id+')" style="font-size:11px" title="Edit / Preview"><i class="ti ti-edit"></i></button><button onclick="togglePaid('+i.id+')" style="font-size:11px">'+(i.status==='paid'?'Unpaid':'Paid')+'</button><button class="danger-btn" onclick="delInv('+i.id+')" style="font-size:11px"><i class="ti ti-trash"></i></button></span></td></tr>';}).join('')+
+    DB.invoices.map(function(i){return '<tr><td><strong>'+i.num+'</strong></td><td>'+i.clientName+'</td><td>'+fmt(i.date)+'</td><td>'+fmt(i.due)+'</td><td style="text-align:right"><strong>'+money(i.total)+'</strong></td><td><span class="badge '+(i.status==='paid'?'green':'red')+'">'+i.status+'</span></td><td><span style="display:flex;gap:5px"><button onclick="viewInv('+i.id+')" style="font-size:11px" title="Edit"><i class="ti ti-edit"></i></button><button onclick="togglePaid('+i.id+')" style="font-size:11px">'+(i.status==='paid'?'Unpaid':'Paid')+'</button><button class="danger-btn" onclick="delInv('+i.id+')" style="font-size:11px"><i class="ti ti-trash"></i></button></span></td></tr>';}).join('')+
     '</tbody></table>';
 }
 
@@ -496,9 +501,107 @@ function saveDraw(){var d=gv('drw-date'),amt=parseFloat(gv('drw-amt'));if(!d||is
 function delDrw(id){if(!confirm('Delete?'))return;DB.draws=DB.draws.filter(function(x){return x.id!==id;});save();renderDrwTable();}
 function renderDrwTable(){var el=document.getElementById('drw-table');if(!el)return;var tot=DB.draws.reduce(function(s,d){return s+d.amount;},0);el.innerHTML=DB.draws.length?'<div style="text-align:right;margin-bottom:10px"><strong style="color:var(--warn)">Total: '+money(tot)+'</strong></div><table><thead><tr><th>Date</th><th>Note</th><th style="text-align:right">Amount</th><th></th></tr></thead><tbody>'+DB.draws.map(function(d){return '<tr><td>'+fmt(d.date)+'</td><td>'+(d.note||'-')+'</td><td style="text-align:right"><strong>'+money(d.amount)+'</strong></td><td><button class="danger-btn" onclick="delDrw('+d.id+')" style="font-size:11px"><i class="ti ti-trash"></i></button></td></tr>';}).join('')+'</tbody></table>':'<p style="color:var(--muted);font-size:13px">No draws recorded.</p>';}
 
-var NJQ=[{key:'q1',label:'Q1',period:'Jan-Mar',due:'April 15',mm:'04-15'},{key:'q2',label:'Q2',period:'Apr-May',due:'June 15',mm:'06-15'},{key:'q3',label:'Q3',period:'Jun-Aug',due:'September 15',mm:'09-15'},{key:'q4',label:'Q4',period:'Sep-Dec',due:'January 15 (next yr)',mm:'01-15'}];
-function initNJYear(){var sel=document.getElementById('nj-year');if(!sel)return;var y=new Date().getFullYear();var cur=sel.value||y;sel.innerHTML='';for(var i=y-3;i<=y+1;i++)sel.innerHTML+='<option value="'+i+'"'+(i==cur?' selected':'')+'>'+i+'</option>';}
-function renderNJ(){var sel=document.getElementById('nj-year');if(!sel)return;var yr=parseInt(sel.value)||new Date().getFullYear();var now=new Date();var alerts='',cards='';NJQ.forEach(function(q){var key=q.key+'-'+yr;var data=DB.njTax[key]||{paid:false,amount:'',paidDate:'',note:''};var dueYr=q.key==='q4'?yr+1:yr;var dueDate=new Date(dueYr+'-'+q.mm);var days=Math.ceil((dueDate-now)/864e5);var status=data.paid?'paid':days<0?'overdue':days<=45?'upcoming':'future';if(!data.paid&&days<=45){alerts+='<div class="alert '+(days<0?'danger':'warn')+'"><i class="ti ti-alarm"></i><strong>NJ '+q.label+' '+yr+' '+(days<0?'OVERDUE!':'due in '+days+' days!')+'</strong> Due '+q.due+'.</div>';}cards+='<div class="tax-card '+status+'"><div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:14px"><div><div style="font-weight:700;font-size:15px">'+q.label+' '+yr+' - '+q.period+'</div><div style="font-size:12px;color:var(--muted);margin:3px 0">Due '+q.due+'</div><span class="badge '+(status==='paid'?'green':status==='overdue'?'red':status==='upcoming'?'amber':'blue')+'">'+(status==='paid'?'Paid':status==='overdue'?'Overdue':status==='upcoming'?'Due Soon':'Upcoming')+'</span>'+(data.paid&&data.amount?'<div style="font-size:12px;margin-top:6px;color:var(--success)">Paid: '+money(data.amount)+(data.paidDate?' on '+fmt(data.paidDate):'')+'</div>':'')+'</div><div style="min-width:300px"><div class="g2" style="gap:8px"><div class="fg" style="margin:0"><label>Amount ($)</label><input type="number" step="0.01" min="0" value="'+(data.amount||'')+'" placeholder="0.00" id="nj-amt-'+key+'"></div><div class="fg" style="margin:0"><label>Date Paid</label><input type="date" value="'+(data.paidDate||'')+'" id="nj-dt-'+key+'"></div></div><div class="fg" style="margin:6px 0 0"><label>Note / Confirmation #</label><input value="'+(data.note||'')+'" placeholder="Check #, confirmation..." id="nj-note-'+key+'"></div><div style="display:flex;gap:8px;margin-top:10px"><button class="primary" style="font-size:12px" onclick="markNJ(\''+key+'\','+(!data.paid)+')">'+(data.paid?'Mark Unpaid':'Mark as Paid')+'</button><button style="font-size:12px" onclick="saveNJ(\''+key+'\')"><i class="ti ti-device-floppy"></i> Save</button></div></div></div></div>';});document.getElementById('nj-alerts').innerHTML=alerts;document.getElementById('nj-cards').innerHTML=cards;}
+/* ---- NJ TAX ---- */
+var NJQ=[
+  {key:'q1',label:'Q1',period:'Jan-Mar',months:[0,1,2],due:'April 15',mm:'04-15'},
+  {key:'q2',label:'Q2',period:'Apr-Jun',months:[3,4,5],due:'June 15',mm:'06-15'},
+  {key:'q3',label:'Q3',period:'Jul-Sep',months:[6,7,8],due:'September 15',mm:'09-15'},
+  {key:'q4',label:'Q4',period:'Oct-Dec',months:[9,10,11],due:'January 15 (next yr)',mm:'01-15'}
+];
+
+function getQuarterTotals(yr){
+  var result={};
+  NJQ.forEach(function(q){
+    result[q.key]={grossReceipts:0,salesTaxCollected:0,invoiceCount:0,invoices:[]};
+  });
+  DB.invoices.forEach(function(inv){
+    if(!inv.date)return;
+    var d=new Date(inv.date+'T00:00:00');
+    if(d.getFullYear()!==yr)return;
+    var m=d.getMonth();
+    NJQ.forEach(function(q){
+      if(q.months.indexOf(m)>-1){
+        result[q.key].grossReceipts+=parseFloat(inv.subtotal||0);
+        result[q.key].salesTaxCollected+=parseFloat(inv.tax||0);
+        result[q.key].invoiceCount++;
+        result[q.key].invoices.push(inv.num);
+      }
+    });
+  });
+  return result;
+}
+
+function initNJYear(){
+  var sel=document.getElementById('nj-year');if(!sel)return;
+  var y=new Date().getFullYear();var cur=sel.value||y;
+  sel.innerHTML='';
+  for(var i=y-3;i<=y+1;i++)sel.innerHTML+='<option value="'+i+'"'+(i==cur?' selected':'')+'>'+i+'</option>';
+}
+
+function renderNJ(){
+  var sel=document.getElementById('nj-year');if(!sel)return;
+  var yr=parseInt(sel.value)||new Date().getFullYear();
+  var now=new Date();
+  var alerts='',cards='';
+  var qtotals=getQuarterTotals(yr);
+
+  NJQ.forEach(function(q){
+    var key=q.key+'-'+yr;
+    var data=DB.njTax[key]||{paid:false,amount:'',paidDate:'',note:''};
+    var dueYr=q.key==='q4'?yr+1:yr;
+    var dueDate=new Date(dueYr+'-'+q.mm);
+    var days=Math.ceil((dueDate-now)/864e5);
+    var status=data.paid?'paid':days<0?'overdue':days<=45?'upcoming':'future';
+    var qt=qtotals[q.key];
+
+    if(!data.paid&&days<=45){
+      alerts+='<div class="alert '+(days<0?'danger':'warn')+'"><i class="ti ti-alarm"></i><strong>NJ '+q.label+' '+yr+' '+(days<0?'OVERDUE!':'due in '+days+' days!')+'</strong> Due '+q.due+'.</div>';
+    }
+
+    var summaryHtml='';
+    if(qt.invoiceCount>0){
+      summaryHtml='<div class="summary-box" style="margin-bottom:12px">'+
+        '<div style="font-size:11px;font-weight:700;color:var(--accent);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px">From Your Invoices This Quarter</div>'+
+        '<div class="row"><span class="label">Invoices dated this quarter</span><span class="val">'+qt.invoiceCount+' ('+qt.invoices.join(', ')+')</span></div>'+
+        '<div class="row"><span class="label">Gross Receipts (subtotal)</span><span class="val">'+money(qt.grossReceipts)+'</span></div>'+
+        '<div class="row"><span class="label">NJ Sales Tax Collected</span><span class="val" style="color:var(--danger)">'+money(qt.salesTaxCollected)+'</span></div>'+
+        '<div class="row total"><span class="label">Total Invoiced (incl. tax)</span><span class="val">'+money(qt.grossReceipts+qt.salesTaxCollected)+'</span></div>'+
+      '</div>';
+    } else {
+      summaryHtml='<div style="font-size:12px;color:var(--muted);margin-bottom:12px;padding:10px;background:var(--bg);border-radius:6px">No invoices dated in this quarter yet.</div>';
+    }
+
+    cards+='<div class="tax-card '+status+'">'+
+      '<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;margin-bottom:14px">'+
+        '<div>'+
+          '<div style="font-weight:700;font-size:16px">'+q.label+' '+yr+' &mdash; '+q.period+'</div>'+
+          '<div style="font-size:12px;color:var(--muted);margin:3px 0">NJ CBT due '+q.due+'</div>'+
+          '<span class="badge '+(status==='paid'?'green':status==='overdue'?'red':status==='upcoming'?'amber':'blue')+'">'+
+            (status==='paid'?'&#10003; Paid':status==='overdue'?'Overdue':status==='upcoming'?'Due Soon':'Upcoming')+
+          '</span>'+
+        '</div>'+
+        (data.paid&&data.amount?'<div style="text-align:right"><div style="font-size:11px;color:var(--muted)">Tax paid</div><div style="font-size:18px;font-weight:700;color:var(--success)">'+money(data.amount)+'</div>'+(data.paidDate?'<div style="font-size:11px;color:var(--muted)">on '+fmt(data.paidDate)+'</div>':'')+'</div>':'')+
+      '</div>'+
+      summaryHtml+
+      '<div style="border-top:0.5px solid var(--border);padding-top:14px">'+
+        '<div style="font-size:12px;font-weight:600;margin-bottom:10px;color:var(--text)">Record Your Tax Payment</div>'+
+        '<div class="g3" style="gap:8px">'+
+          '<div class="fg" style="margin:0"><label>Amount Paid to NJ ($)</label><input type="number" step="0.01" min="0" value="'+(data.amount||'')+'" placeholder="0.00" id="nj-amt-'+key+'"></div>'+
+          '<div class="fg" style="margin:0"><label>Date Paid</label><input type="date" value="'+(data.paidDate||'')+'" id="nj-dt-'+key+'"></div>'+
+          '<div class="fg" style="margin:0"><label>Confirmation / Check #</label><input value="'+(data.note||'')+'" placeholder="Check #, confirmation..." id="nj-note-'+key+'"></div>'+
+        '</div>'+
+        '<div style="display:flex;gap:8px;margin-top:10px">'+
+          '<button class="primary" style="font-size:12px" onclick="markNJ(\''+key+'\','+(!data.paid)+')">'+(data.paid?'Mark Unpaid':'&#10003; Mark as Paid')+'</button>'+
+          '<button style="font-size:12px" onclick="saveNJ(\''+key+'\')"><i class="ti ti-device-floppy"></i> Save</button>'+
+        '</div>'+
+      '</div>'+
+    '</div>';
+  });
+
+  document.getElementById('nj-alerts').innerHTML=alerts;
+  document.getElementById('nj-cards').innerHTML=cards;
+}
+
 function saveNJ(key){if(!DB.njTax[key])DB.njTax[key]={paid:false};DB.njTax[key].amount=gv('nj-amt-'+key);DB.njTax[key].paidDate=gv('nj-dt-'+key);DB.njTax[key].note=gv('nj-note-'+key);save();renderNJ();alert('Saved!');}
 function markNJ(key,paid){if(!DB.njTax[key])DB.njTax[key]={paid:false,amount:'',paidDate:'',note:''};DB.njTax[key].paid=paid;if(paid&&!DB.njTax[key].paidDate)DB.njTax[key].paidDate=today();DB.njTax[key].amount=gv('nj-amt-'+key)||DB.njTax[key].amount;DB.njTax[key].note=gv('nj-note-'+key)||DB.njTax[key].note;save();renderNJ();}
 
