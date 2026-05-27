@@ -383,7 +383,15 @@ function initNewInv(){
 
 function addWorker(){workers.push({id:Date.now(),title:'',desc:'',hours:'',rate:''});renderWorkers();}
 function rmWorker(id){workers=workers.filter(function(w){return w.id!==id;});renderWorkers();}
-function upW(id,f,v){var w=workers.find(function(x){return x.id===id;});if(w)w[f]=v;renderWorkers();}
+function upW(id,f,v){
+  var w=workers.find(function(x){return x.id===id;});
+  if(!w)return;
+  w[f]=v;
+  var sub=parseFloat(w.hours||0)*parseFloat(w.rate||0);
+  var subEl=document.getElementById('ws-'+id);
+  if(subEl)subEl.value='$'+sub.toFixed(2);
+  calcTotals();
+}
 
 function renderWorkers(){
   var c=document.getElementById('workers-list');if(!c)return;
@@ -397,7 +405,7 @@ function renderWorkers(){
       '<input id="wd-'+w.id+'" placeholder="Description" value="'+(w.desc||'')+'" onchange="upW('+w.id+',\'desc\',this.value)">'+
       '<input id="wh-'+w.id+'" type="number" placeholder="0" value="'+(w.hours||'')+'" step="0.25" min="0" oninput="upW('+w.id+',\'hours\',this.value)">'+
       '<input id="wr-'+w.id+'" type="number" placeholder="0.00" value="'+(w.rate||'')+'" step="0.01" min="0" oninput="upW('+w.id+',\'rate\',this.value)">'+
-      '<input readonly value="$'+sub+'" style="background:var(--bg);font-weight:600">'+
+      '<input readonly id="ws-'+w.id+'" value="$'+sub+'" style="background:var(--bg);font-weight:600">'+
       '<button class="rm-btn" onclick="rmWorker('+w.id+')"><i class="ti ti-x"></i></button>';
     c.appendChild(div);
   });
