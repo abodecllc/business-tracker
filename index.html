@@ -214,14 +214,23 @@ tr:hover td{background:var(--bg)}
 <div id="page-income" class="page">
   <div class="pg-title"><i class="ti ti-trending-up" style="color:var(--success)"></i> Income</div>
   <div class="card">
-    <div class="card-title">Record Income Payment</div>
+    <div id="inc-form-title" class="card-title">Record Income Payment</div>
+    <input type="hidden" id="inc-edit-id">
+    <div class="g2" style="margin-bottom:10px">
+      <div class="fg" style="margin:0"><label>Select Saved Client (optional)</label>
+        <select id="inc-cli-pick" onchange="fillIncClient()" style="width:100%"><option value="">-- Select client --</option></select>
+      </div>
+      <div class="fg" style="margin:0"><label>Source / Client Name *</label><input id="inc-src" placeholder="Who paid you"></div>
+    </div>
     <div class="g3">
       <div class="fg"><label>Date *</label><input type="date" id="inc-date"></div>
-      <div class="fg"><label>Source / Client *</label><input id="inc-src" placeholder="Who paid you"></div>
+      <div class="fg"><label>Invoice Reference</label><input id="inc-desc" placeholder="Invoice #, job description..."></div>
       <div class="fg"><label>Amount ($) *</label><input type="number" id="inc-amt" placeholder="0.00" step="0.01" min="0"></div>
     </div>
-    <div class="fg"><label>Description</label><input id="inc-desc" placeholder="Invoice #, job description..."></div>
-    <div class="acts"><button class="primary" onclick="saveIncome()"><i class="ti ti-plus"></i> Add Income</button></div>
+    <div class="acts">
+      <button class="primary" id="inc-save-btn" onclick="saveIncome()"><i class="ti ti-plus"></i> Add Income</button>
+      <button id="inc-cancel-btn" onclick="clearIncForm()" style="display:none">Cancel Edit</button>
+    </div>
   </div>
   <div class="card"><div id="inc-table"></div></div>
 </div>
@@ -267,7 +276,7 @@ tr:hover td{background:var(--bg)}
   </div>
   <div id="nj-alerts"></div>
   <div id="nj-cards"></div>
-  <div class="info-box"><strong>NJ CBT Due Dates:</strong> Q1 Apr 15 &nbsp;·&nbsp; Q2 Jun 15 &nbsp;·&nbsp; Q3 Sep 15 &nbsp;·&nbsp; Q4 Jan 15 (next year)<br><span style="font-size:11px;margin-top:4px;display:block">Invoice totals are based on invoice <strong>date</strong>. Q1=Jan-Mar, Q2=Apr-Jun, Q3=Jul-Sep, Q4=Oct-Dec.</span></div>
+  <div class="info-box"><strong>NJ CBT Due Dates:</strong> Q1 Apr 15 &nbsp;·&nbsp; Q2 Jul 15 &nbsp;·&nbsp; Q3 Oct 15 &nbsp;·&nbsp; Q4 Jan 15 (next year)<br><span style="font-size:11px;margin-top:4px;display:block">Invoice totals are based on invoice <strong>date</strong>. Q1=Jan-Mar, Q2=Apr-Jun, Q3=Jul-Sep, Q4=Oct-Dec.</span></div>
 </div>
 
 <div id="page-federal" class="page">
@@ -348,7 +357,7 @@ function nav(id){
   if(id==='invoice-new')initNewInv();
   if(id==='nj-tax'){initNJYear();renderNJ();}
   if(id==='clients')renderCliTable();
-  if(id==='income')renderIncTable();
+  if(id==='income'){populateIncCliPicker();renderIncTable();}
   if(id==='expenses')renderExpTable();
   if(id==='draws')renderDrwTable();
   if(id==='federal')renderFedTable();
@@ -483,20 +492,68 @@ function viewInv(id){
   showInvTab('builder');
 }
 
-function saveClient(){var name=gv('cli-name');if(!name)return alert('Client name required.');var eid=gv('cli-edit-id');if(eid){var c=DB.clients.find(function(x){return x.id==eid;});if(c){c.name=name;c.contact=gv('cli-contact');c.addr=gv('cli-addr');c.phone=gv('cli-phone');c.email=gv('cli-email');c.notes=gv('cli-notes');}}else{DB.clients.push({id:Date.now(),name:name,contact:gv('cli-contact'),addr:gv('cli-addr'),phone:gv('cli-phone'),email:gv('cli-email'),notes:gv('cli-notes')});}save();clearCliForm();renderCliTable();populateCliPicker();}
+/* ---- CLIENTS ---- */
+function saveClient(){var name=gv('cli-name');if(!name)return alert('Client name required.');var eid=gv('cli-edit-id');if(eid){var c=DB.clients.find(function(x){return x.id==eid;});if(c){c.name=name;c.contact=gv('cli-contact');c.addr=gv('cli-addr');c.phone=gv('cli-phone');c.email=gv('cli-email');c.notes=gv('cli-notes');}}else{DB.clients.push({id:Date.now(),name:name,contact:gv('cli-contact'),addr:gv('cli-addr'),phone:gv('cli-phone'),email:gv('cli-email'),notes:gv('cli-notes')});}save();clearCliForm();renderCliTable();populateCliPicker();populateIncCliPicker();}
 function clearCliForm(){['cli-edit-id','cli-name','cli-contact','cli-addr','cli-phone','cli-email','cli-notes'].forEach(function(id){sv(id,'');});document.getElementById('cli-form-title').textContent='Add Client';}
 function editCli(id){var c=DB.clients.find(function(x){return x.id===id;});if(!c)return;sv('cli-edit-id',id);sv('cli-name',c.name);sv('cli-contact',c.contact);sv('cli-addr',c.addr);sv('cli-phone',c.phone);sv('cli-email',c.email);sv('cli-notes',c.notes);document.getElementById('cli-form-title').textContent='Edit Client: '+c.name;window.scrollTo(0,0);}
-function delCli(id){if(!confirm('Delete client?'))return;DB.clients=DB.clients.filter(function(x){return x.id!==id;});save();renderCliTable();populateCliPicker();}
+function delCli(id){if(!confirm('Delete client?'))return;DB.clients=DB.clients.filter(function(x){return x.id!==id;});save();renderCliTable();populateCliPicker();populateIncCliPicker();}
 function renderCliTable(){var el=document.getElementById('cli-table');if(!el)return;if(!DB.clients.length){el.innerHTML='<p style="color:var(--muted);font-size:13px;padding:8px 0">No clients saved.</p>';return;}el.innerHTML='<table><thead><tr><th>Name</th><th>Contact</th><th>Phone</th><th>Email</th><th>Notes</th><th></th></tr></thead><tbody>'+DB.clients.map(function(c){return '<tr><td><strong>'+c.name+'</strong><br><span style="color:var(--muted);font-size:11px">'+((c.addr||'').split('\n')[0]||'')+'</span></td><td>'+(c.contact||'-')+'</td><td>'+(c.phone||'-')+'</td><td>'+(c.email||'-')+'</td><td>'+(c.notes||'-')+'</td><td><span style="display:flex;gap:5px"><button onclick="editCli('+c.id+')" style="font-size:11px"><i class="ti ti-edit"></i> Edit</button><button class="danger-btn" onclick="delCli('+c.id+')" style="font-size:11px"><i class="ti ti-trash"></i></button></span></td></tr>';}).join('')+'</tbody></table>';}
 
-function saveIncome(){var d=gv('inc-date'),src=gv('inc-src'),amt=parseFloat(gv('inc-amt'));if(!d||!src||isNaN(amt))return alert('Fill all fields.');DB.income.unshift({id:Date.now(),date:d,source:src,amount:amt,desc:gv('inc-desc')});save();renderIncTable();['inc-date','inc-src','inc-amt','inc-desc'].forEach(function(id){sv(id,'');});}
+/* ---- INCOME ---- */
+function populateIncCliPicker(){
+  var sel=document.getElementById('inc-cli-pick');if(!sel)return;
+  sel.innerHTML='<option value="">-- Select client --</option>';
+  DB.clients.forEach(function(c){sel.innerHTML+='<option value="'+c.name+'">'+c.name+'</option>';});
+}
+function fillIncClient(){
+  var name=gv('inc-cli-pick');
+  if(name)sv('inc-src',name);
+}
+function saveIncome(){
+  var d=gv('inc-date'),src=gv('inc-src'),amt=parseFloat(gv('inc-amt'));
+  if(!d||!src||isNaN(amt))return alert('Fill date, source, and amount.');
+  var eid=gv('inc-edit-id');
+  if(eid){
+    var ex=DB.income.find(function(x){return x.id==eid;});
+    if(ex){ex.date=d;ex.source=src;ex.amount=amt;ex.desc=gv('inc-desc');}
+    save();clearIncForm();renderIncTable();alert('Income record updated.');
+  } else {
+    DB.income.unshift({id:Date.now(),date:d,source:src,amount:amt,desc:gv('inc-desc')});
+    save();clearIncForm();renderIncTable();
+  }
+}
+function clearIncForm(){
+  sv('inc-edit-id','');sv('inc-date','');sv('inc-src','');sv('inc-amt','');sv('inc-desc','');sv('inc-cli-pick','');
+  var t=document.getElementById('inc-form-title');if(t)t.textContent='Record Income Payment';
+  var b=document.getElementById('inc-save-btn');if(b)b.innerHTML='<i class="ti ti-plus"></i> Add Income';
+  var cb=document.getElementById('inc-cancel-btn');if(cb)cb.style.display='none';
+}
+function editInc(id){
+  var i=DB.income.find(function(x){return x.id===id;});if(!i)return;
+  sv('inc-edit-id',id);sv('inc-date',i.date);sv('inc-src',i.source);sv('inc-amt',i.amount);sv('inc-desc',i.desc||'');
+  var t=document.getElementById('inc-form-title');if(t)t.textContent='Edit Income Record';
+  var b=document.getElementById('inc-save-btn');if(b)b.innerHTML='<i class="ti ti-device-floppy"></i> Update Income';
+  var cb=document.getElementById('inc-cancel-btn');if(cb)cb.style.display='inline-flex';
+  window.scrollTo(0,0);
+}
 function delInc(id){if(!confirm('Delete?'))return;DB.income=DB.income.filter(function(x){return x.id!==id;});save();renderIncTable();}
-function renderIncTable(){var el=document.getElementById('inc-table');if(!el)return;var tot=DB.income.reduce(function(s,i){return s+i.amount;},0);el.innerHTML=DB.income.length?'<div style="text-align:right;margin-bottom:10px"><strong style="color:var(--success)">Total: '+money(tot)+'</strong></div><table><thead><tr><th>Date</th><th>Source</th><th>Description</th><th style="text-align:right">Amount</th><th></th></tr></thead><tbody>'+DB.income.map(function(i){return '<tr><td>'+fmt(i.date)+'</td><td>'+i.source+'</td><td>'+(i.desc||'-')+'</td><td style="text-align:right"><strong>'+money(i.amount)+'</strong></td><td><button class="danger-btn" onclick="delInc('+i.id+')" style="font-size:11px"><i class="ti ti-trash"></i></button></td></tr>';}).join('')+'</tbody></table>':'<p style="color:var(--muted);font-size:13px">No income recorded.</p>';}
+function renderIncTable(){
+  var el=document.getElementById('inc-table');if(!el)return;
+  var tot=DB.income.reduce(function(s,i){return s+i.amount;},0);
+  el.innerHTML=DB.income.length?
+    '<div style="text-align:right;margin-bottom:10px"><strong style="color:var(--success)">Total: '+money(tot)+'</strong></div>'+
+    '<table><thead><tr><th>Date</th><th>Source</th><th>Description</th><th style="text-align:right">Amount</th><th></th></tr></thead><tbody>'+
+    DB.income.map(function(i){return '<tr><td>'+fmt(i.date)+'</td><td>'+i.source+'</td><td>'+(i.desc||'-')+'</td><td style="text-align:right"><strong>'+money(i.amount)+'</strong></td><td><span style="display:flex;gap:5px"><button onclick="editInc('+i.id+')" style="font-size:11px"><i class="ti ti-edit"></i></button><button class="danger-btn" onclick="delInc('+i.id+')" style="font-size:11px"><i class="ti ti-trash"></i></button></span></td></tr>';}).join('')+
+    '</tbody></table>':
+    '<p style="color:var(--muted);font-size:13px">No income recorded.</p>';
+}
 
+/* ---- EXPENSES ---- */
 function saveExpense(){var d=gv('exp-date'),amt=parseFloat(gv('exp-amt'));if(!d||isNaN(amt))return alert('Fill date and amount.');DB.expenses.unshift({id:Date.now(),date:d,category:gv('exp-cat'),amount:amt,desc:gv('exp-desc')});save();renderExpTable();['exp-date','exp-amt','exp-desc'].forEach(function(id){sv(id,'');});}
 function delExp(id){if(!confirm('Delete?'))return;DB.expenses=DB.expenses.filter(function(x){return x.id!==id;});save();renderExpTable();}
 function renderExpTable(){var el=document.getElementById('exp-table');if(!el)return;var tot=DB.expenses.reduce(function(s,e){return s+e.amount;},0);el.innerHTML=DB.expenses.length?'<div style="text-align:right;margin-bottom:10px"><strong style="color:var(--danger)">Total: '+money(tot)+'</strong></div><table><thead><tr><th>Date</th><th>Category</th><th>Description</th><th style="text-align:right">Amount</th><th></th></tr></thead><tbody>'+DB.expenses.map(function(e){return '<tr><td>'+fmt(e.date)+'</td><td><span class="badge blue">'+e.category+'</span></td><td>'+(e.desc||'-')+'</td><td style="text-align:right"><strong>'+money(e.amount)+'</strong></td><td><button class="danger-btn" onclick="delExp('+e.id+')" style="font-size:11px"><i class="ti ti-trash"></i></button></td></tr>';}).join('')+'</tbody></table>':'<p style="color:var(--muted);font-size:13px">No expenses recorded.</p>';}
 
+/* ---- DRAWS ---- */
 function saveDraw(){var d=gv('drw-date'),amt=parseFloat(gv('drw-amt'));if(!d||isNaN(amt))return alert('Fill date and amount.');DB.draws.unshift({id:Date.now(),date:d,amount:amt,note:gv('drw-note')});save();renderDrwTable();['drw-date','drw-amt','drw-note'].forEach(function(id){sv(id,'');});}
 function delDrw(id){if(!confirm('Delete?'))return;DB.draws=DB.draws.filter(function(x){return x.id!==id;});save();renderDrwTable();}
 function renderDrwTable(){var el=document.getElementById('drw-table');if(!el)return;var tot=DB.draws.reduce(function(s,d){return s+d.amount;},0);el.innerHTML=DB.draws.length?'<div style="text-align:right;margin-bottom:10px"><strong style="color:var(--warn)">Total: '+money(tot)+'</strong></div><table><thead><tr><th>Date</th><th>Note</th><th style="text-align:right">Amount</th><th></th></tr></thead><tbody>'+DB.draws.map(function(d){return '<tr><td>'+fmt(d.date)+'</td><td>'+(d.note||'-')+'</td><td style="text-align:right"><strong>'+money(d.amount)+'</strong></td><td><button class="danger-btn" onclick="delDrw('+d.id+')" style="font-size:11px"><i class="ti ti-trash"></i></button></td></tr>';}).join('')+'</tbody></table>':'<p style="color:var(--muted);font-size:13px">No draws recorded.</p>';}
@@ -511,9 +568,7 @@ var NJQ=[
 
 function getQuarterTotals(yr){
   var result={};
-  NJQ.forEach(function(q){
-    result[q.key]={grossReceipts:0,salesTaxCollected:0,invoiceCount:0,invoices:[]};
-  });
+  NJQ.forEach(function(q){result[q.key]={grossReceipts:0,salesTaxCollected:0,invoiceCount:0,invoices:[]};});
   DB.invoices.forEach(function(inv){
     if(!inv.date)return;
     var d=new Date(inv.date+'T00:00:00');
@@ -563,7 +618,7 @@ function renderNJ(){
       summaryHtml='<div class="summary-box" style="margin-bottom:12px">'+
         '<div style="font-size:11px;font-weight:700;color:var(--accent);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px">From Your Invoices This Quarter</div>'+
         '<div class="row"><span class="label">Invoices dated this quarter</span><span class="val">'+qt.invoiceCount+' ('+qt.invoices.join(', ')+')</span></div>'+
-        '<div class="row"><span class="label">Gross Receipts (subtotal)</span><span class="val">'+money(qt.grossReceipts)+'</span></div>'+
+        '<div class="row"><span class="label">Gross Receipts (subtotal before tax)</span><span class="val">'+money(qt.grossReceipts)+'</span></div>'+
         '<div class="row"><span class="label">NJ Sales Tax Collected</span><span class="val" style="color:var(--danger)">'+money(qt.salesTaxCollected)+'</span></div>'+
         '<div class="row total"><span class="label">Total Invoiced (incl. tax)</span><span class="val">'+money(qt.grossReceipts+qt.salesTaxCollected)+'</span></div>'+
       '</div>';
@@ -605,9 +660,11 @@ function renderNJ(){
 function saveNJ(key){if(!DB.njTax[key])DB.njTax[key]={paid:false};DB.njTax[key].amount=gv('nj-amt-'+key);DB.njTax[key].paidDate=gv('nj-dt-'+key);DB.njTax[key].note=gv('nj-note-'+key);save();renderNJ();alert('Saved!');}
 function markNJ(key,paid){if(!DB.njTax[key])DB.njTax[key]={paid:false,amount:'',paidDate:'',note:''};DB.njTax[key].paid=paid;if(paid&&!DB.njTax[key].paidDate)DB.njTax[key].paidDate=today();DB.njTax[key].amount=gv('nj-amt-'+key)||DB.njTax[key].amount;DB.njTax[key].note=gv('nj-note-'+key)||DB.njTax[key].note;save();renderNJ();}
 
+/* ---- FEDERAL ---- */
 function saveFed(){var yr=parseInt(gv('fed-yr'));if(!yr)return alert('Enter tax year.');var ex=DB.federal.find(function(x){return x.year===yr;});var rec={year:yr,status:gv('fed-status'),amount:parseFloat(gv('fed-amt'))||0,notes:gv('fed-notes'),filedDate:gv('fed-date')};if(ex){Object.assign(ex,rec);}else{DB.federal.push(rec);}DB.federal.sort(function(a,b){return b.year-a.year;});save();renderFedTable();alert('Saved for '+yr+'.');}
 function renderFedTable(){var el=document.getElementById('fed-table');if(!el)return;var sl={not_filed:'Not Filed',extension:'Extension Filed',filed:'Filed',filed_paid:'Filed & Paid'};var sb={not_filed:'red',extension:'amber',filed:'blue',filed_paid:'green'};el.innerHTML=DB.federal.length?'<table><thead><tr><th>Year</th><th>Status</th><th style="text-align:right">Amount</th><th>Filed Date</th><th>Notes</th></tr></thead><tbody>'+DB.federal.map(function(f){return '<tr><td><strong>'+f.year+'</strong></td><td><span class="badge '+(sb[f.status]||'blue')+'">'+(sl[f.status]||f.status)+'</span></td><td style="text-align:right">'+(f.amount?money(f.amount):'-')+'</td><td>'+fmt(f.filedDate)+'</td><td>'+(f.notes||'-')+'</td></tr>';}).join('')+'</tbody></table>':'<p style="color:var(--muted);font-size:13px">No filings recorded.</p>';}
 
+/* ---- DASHBOARD ---- */
 function renderDash(){
   var inc=DB.income.reduce(function(s,i){return s+i.amount;},0);
   var exp=DB.expenses.reduce(function(s,e){return s+e.amount;},0);
@@ -627,6 +684,7 @@ function renderDash(){
   var dt=document.getElementById('d-tax');if(dt)dt.innerHTML=taxHtml;
 }
 
+/* ---- INVOICE PREVIEW & PDF ---- */
 function renderPreview(){
   var s=DB.settings;
   var sub=workers.reduce(function(t,w){return t+parseFloat(w.hours||0)*parseFloat(w.rate||0);},0);
